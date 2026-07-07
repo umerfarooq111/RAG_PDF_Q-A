@@ -1,17 +1,21 @@
 from app.db.database import conn
 from app.services.embedding_service import EmbeddingService
 from app.services.llm_service import LLMService
+from app.services.reranker_service import RerankerService
 
 
 class RetrievalService:
 
     @staticmethod
-    def retrieve_context(question: str, limit: int = 5) -> tuple[str, list[dict]]:
-        # Generate embedding for the question
+    def retrieve_context(question: str, limit: int = 20):
+        """
+        Retrieve candidate chunks from PostgreSQL.
+        """
+
         question_embedding = EmbeddingService.embed_query(question)
 
-        # Search PostgreSQL (pgvector)
         with conn.cursor() as cursor:
+
             cursor.execute(
                 """
                 SELECT content, page_number, chunk_index
@@ -21,49 +25,68 @@ class RetrievalService:
                 """,
                 (question_embedding, limit)
             )
+
             results = cursor.fetchall()
 
-        # Build context
-        context = "\n\n".join([row[0] for row in results])
-
-        # Metadata for debugging/citations
         chunks_metadata = [
+
             {
                 "content": row[0],
                 "page_number": row[1],
                 "chunk_index": row[2]
             }
+
             for row in results
+
         ]
 
-        return context, chunks_metadata
+        return chunks_metadata
 
     @staticmethod
     def ask_question(question: str):
 
-        # Retrieve relevant chunks
-        context, chunks_metadata = RetrievalService.retrieve_context(question)
+        # Step 1: Retrieve Top 20 using pgvector
+        chunks_metadata = RetrievalService.retrieve_context(question)
 
-        # Build prompt
+        # Step 2: Rerank and keep Top 5
+        top_chunks = RerankerService.rerank(
+            question,
+            chunks_metadata,
+            top_k=5
+        )
+
+        # Step 3: Build context for Gemini
+        context = "\n\n".join(
+            chunk["content"]
+            for chunk in top_chunks
+        )
+
+        # Step 4: Prompt
         prompt = f"""
-        You are a helpful AI assistant.
-        Answer ONLY using the context below.
-        If the answer is not present in the context, reply:
-        "I don't know based on the provided document."
+You are a helpful AI assistant.
 
-        Context:
-        {context}
+Answer ONLY using the context below.
 
-        Question:
-        {question}
-        """
+If the answer is not present in the context, reply exactly:
 
-        # Call Gemini
+"I don't know based on the provided document."
+
+Context:
+{context}
+
+Question:
+{question}
+"""
+
+        # Step 5: Generate answer
         response = LLMService.invoke(prompt)
 
-        # Return API response
         return {
+
             "question": question,
-            "retrieved_chunks": chunks_metadata,
+
+            "retrieved_chunks": top_chunks,
+
             "answer": response.content
+
         }

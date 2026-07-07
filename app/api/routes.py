@@ -28,15 +28,10 @@ def about():
     }
 
 
-@router.post("/upload")
-async def upload_pdf(file: UploadFile = File(...)):
-    return UploadService.upload_pdf(file)
-
-
-
 @router.post("/ask")
 async def ask_question(question: str):
     return RetrievalService.ask_question(question)
+
 
 
 @router.get("/documents")
