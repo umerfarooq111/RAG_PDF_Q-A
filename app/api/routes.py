@@ -1,15 +1,21 @@
+from httpx import _status_codes
 from fastapi import APIRouter, UploadFile, File
 
 from app.services.upload_service import UploadService
 from app.services.document_service import DocumentService
 from app.services.retrieval_service import RetrievalService
-
+from app.auth.auth_service import AuthService
+from app.schemas.user import UserRegister
 
 router = APIRouter(
     prefix="/api/v1",
     tags=["PDF RAG API"]
 )
 
+
+@router.post("/register")
+def register(user: UserRegister):
+    return AuthService.register(user)
 
 @router.get("/")
 def home():
