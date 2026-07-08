@@ -6,6 +6,7 @@ from app.services.document_service import DocumentService
 from app.services.retrieval_service import RetrievalService
 from app.auth.auth_service import AuthService
 from app.schemas.user import UserRegister
+from app.schemas.login import UserLogin
 
 router = APIRouter(
     prefix="/api/v1",
@@ -16,6 +17,10 @@ router = APIRouter(
 @router.post("/register")
 def register(user: UserRegister):
     return AuthService.register(user)
+
+@router.post("/login")
+def login(user: UserLogin):
+    return AuthService.login(user)
 
 @router.get("/")
 def home():
