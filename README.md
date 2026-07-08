@@ -4,7 +4,7 @@ A production-ready Retrieval-Augmented Generation (RAG) backend API for querying
 
 ---
 
-## 🏗️ Architecture
+## Architecture
 
 ```mermaid
 graph TD
