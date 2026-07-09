@@ -11,7 +11,7 @@ os.makedirs(UPLOAD_DIR, exist_ok=True)
 
 class UploadService:
     @staticmethod
-    def upload_pdf(file: UploadFile) -> dict:
+    def upload_pdf(file: UploadFile, current_user: dict) -> dict:
         # 1. Save uploaded file to disk
         file_path = os.path.join(UPLOAD_DIR, file.filename)
         with open(file_path, "wb") as buffer:
@@ -25,11 +25,11 @@ class UploadService:
         with conn.cursor() as cursor:
             cursor.execute(
                 """
-                INSERT INTO documents (filename, file_path, total_pages)
-                VALUES (%s, %s, %s)
+                INSERT INTO documents (filename, file_path, total_pages , user_id)
+                VALUES (%s, %s, %s , %s)
                 RETURNING id;
                 """,
-                (file.filename, file_path, len(documents))
+                (file.filename, file_path, len(documents), current_user["id"])
             )
             document_id = cursor.fetchone()[0]
             conn.commit()

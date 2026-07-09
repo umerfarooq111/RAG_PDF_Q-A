@@ -7,7 +7,7 @@ from app.services.reranker_service import RerankerService
 class RetrievalService:
 
     @staticmethod
-    def retrieve_context(question: str, limit: int = 20):
+    def retrieve_context(question: str, current_user: dict,limit: int = 20):
         """
         Retrieve candidate chunks from PostgreSQL.
         """
@@ -18,12 +18,15 @@ class RetrievalService:
 
             cursor.execute(
                 """
-                SELECT content, page_number, chunk_index
-                FROM document_chunks
-                ORDER BY embedding <=> %s::vector
+                SELECT dc.content,dc.page_number,dc.chunk_index
+                FROM document_chunks dc
+                JOIN documents d
+                ON dc.document_id = d.id
+                WHERE d.user_id = %s
+                ORDER BY dc.embedding <=> %s::vector
                 LIMIT %s;
                 """,
-                (question_embedding, limit)
+                (current_user['id'], question_embedding, limit)
             )
 
             results = cursor.fetchall()
@@ -43,10 +46,11 @@ class RetrievalService:
         return chunks_metadata
 
     @staticmethod
-    def ask_question(question: str):
+    def ask_question(question: str , current_user: dict):
 
         # Step 1: Retrieve Top 20 using pgvector
-        chunks_metadata = RetrievalService.retrieve_context(question)
+        chunks_metadata = RetrievalService.retrieve_context(  question=question,
+                                                                current_user=current_user)
 
         # Step 2: Rerank and keep Top 5
         top_chunks = RerankerService.rerank(

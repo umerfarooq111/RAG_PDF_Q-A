@@ -37,12 +37,23 @@ def about():
     }
 
 @router.post("/upload")
-async def upload_pdf(file: UploadFile = File(...), current_user: dict = Depends(get_current_user)):
-    return UploadService.upload_pdf(file)
+async def upload_pdf(
+    file: UploadFile = File(...),
+    current_user=Depends(get_current_user)
+):
+    """
+    Upload a PDF file to be processed.
+    Only authenticated users can upload files.
+    """
+    return UploadService.upload_pdf(
+        file=file,
+        current_user=current_user
+    )
 
 @router.post("/ask")
 async def ask_question(question: str, current_user: dict = Depends(get_current_user)):
-    return RetrievalService.ask_question(question)
+    return RetrievalService.ask_question(question=question,
+        current_user=current_user)
 
 
 @router.get("/documents")
