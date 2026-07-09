@@ -1,7 +1,4 @@
-from aiohttp import web_urldispatcher
-from aiohttp import web_urldispatcher
-from aiohttp import web_urldispatcher
-from aiohttp import web_urldispatcher
+from fastapi import HTTPException, status
 from app.db.database import conn
 from app.auth.password import PasswordService
 from app.schemas.user import UserRegister
@@ -11,43 +8,42 @@ from app.auth.jwt_service import JWTService
 class AuthService:
     @staticmethod
     def login(user):
-
         with conn.cursor() as cursor:
-
             cursor.execute(
-            """
-            SELECT id, username, email, password_hash
-            FROM users
-            WHERE email = %s
-            """,
-            (user.email,)
+                """
+                SELECT id, username, email, password_hash
+                FROM users
+                WHERE email = %s
+                """,
+                (user.email,)
             )
-
             # Fetch inside the with block
             db_user = cursor.fetchone()
 
-    # User not found
+        # User not found
         if db_user is None:
-            return {
-            "message": "Invalid email or password."
-            }
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Invalid email or password."
+            )
 
         # Verify password
         is_valid = PasswordService.verify_password(
-        user.password,
-        db_user[3]
+            user.password,
+            db_user[3]
         )
 
         if not is_valid:
-            return {
-            "message": "Invalid email or password."
-            }
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Invalid email or password."
+            )
 
-    # Create JWT
+        # Create JWT
         access_token = JWTService.create_access_token(
             data={
-            "sub": db_user[2],
-            "user_id": db_user[0]
+                "sub": db_user[2],
+                "user_id": db_user[0]
             }
         )
 
@@ -58,9 +54,7 @@ class AuthService:
 
     @staticmethod
     def register(user: UserRegister):
-
         with conn.cursor() as cursor:
-
             # Check username/email
             cursor.execute(
                 """
@@ -70,13 +64,13 @@ class AuthService:
                 """,
                 (user.username, user.email)
             )
-
             existing = cursor.fetchone()
 
             if existing:
-                return {
-                    "message": "Username or Email already exists."
-                }
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="Username or Email already exists."
+                )
 
             # Hash password
             hashed_password = PasswordService.hash_password(user.password)
@@ -85,8 +79,8 @@ class AuthService:
             cursor.execute(
                 """
                 INSERT INTO users
-                (username,email,password_hash)
-                VALUES (%s,%s,%s)
+                (username, email, password_hash)
+                VALUES (%s, %s, %s)
                 """,
                 (
                     user.username,
@@ -94,9 +88,8 @@ class AuthService:
                     hashed_password
                 )
             )
-
             conn.commit()
 
         return {
             "message": "User registered successfully."
-        }
+        }

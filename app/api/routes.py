@@ -1,10 +1,10 @@
-from httpx import _status_codes
-from fastapi import APIRouter, UploadFile, File
+from fastapi import APIRouter, UploadFile, File, Depends
 
 from app.services.upload_service import UploadService
 from app.services.document_service import DocumentService
 from app.services.retrieval_service import RetrievalService
 from app.auth.auth_service import AuthService
+from app.auth.dependencies import get_current_user
 from app.schemas.user import UserRegister
 from app.schemas.login import UserLogin
 
@@ -37,17 +37,16 @@ def about():
     }
 
 @router.post("/upload")
-async def upload_pdf(file: UploadFile = File(...)):
+async def upload_pdf(file: UploadFile = File(...), current_user: dict = Depends(get_current_user)):
     return UploadService.upload_pdf(file)
 
 @router.post("/ask")
-async def ask_question(question: str):
+async def ask_question(question: str, current_user: dict = Depends(get_current_user)):
     return RetrievalService.ask_question(question)
 
 
-
 @router.get("/documents")
-def get_documents():
+def get_documents(current_user: dict = Depends(get_current_user)):
     documents = DocumentService.get_all_documents()
     return {
         "documents": documents
@@ -55,7 +54,7 @@ def get_documents():
 
 
 @router.delete("/documents/{document_id}")
-def delete_document(document_id: int):
+def delete_document(document_id: int, current_user: dict = Depends(get_current_user)):
     success = DocumentService.delete_document(document_id)
     if not success:
         return {
@@ -67,9 +66,10 @@ def delete_document(document_id: int):
 
 
 @router.delete("/clear")
-def clear_database():
+def clear_database(current_user: dict = Depends(get_current_user)):
     DocumentService.clear_all_documents()
     return {
         "message": "All documents deleted successfully."
     }
+
 
