@@ -1,7 +1,6 @@
 from jose import JWTError
 import os
 from datetime import datetime, timedelta
-
 from jose import jwt
 from dotenv import load_dotenv
 from fastapi import HTTPException, status

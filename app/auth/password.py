@@ -2,7 +2,6 @@ import bcrypt
 
 
 class PasswordService:
-
     @staticmethod
     def hash_password(password: str) -> str:
         # Generate a salt and hash the password

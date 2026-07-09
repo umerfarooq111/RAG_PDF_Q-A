@@ -118,19 +118,57 @@ ON document_chunks USING hnsw (embedding vector_cosine_ops);
     pip install -r requirements.txt
     ```
 
-4.  **Configure Environment Variables:**
-    Create a `.env` file in the root directory (based on `.env.example` or editing the existing `.env`):
-    ```env
-    GOOGLE_API_KEY="your-gemini-api-key"
-    HF_TOKEN="your-huggingface-token"
-    DATABASE_URL="postgresql://username:password@localhost:5432/pdf_rag_db"
-    ```
 
-5.  **Run the Server:**
-    ```bash
-    uvicorn app.main:app --reload
-    ```
-    The application will start at `http://127.0.0.1:8000`.
+## 4. Configure Environment Variables
+
+Create a `.env` file in the project root (or copy `.env.example` if available) and add the following variables:
+
+```env
+# Google Gemini API Key
+GOOGLE_API_KEY=your-google-api-key
+
+# Hugging Face Token (Required for Hugging Face models)
+HF_TOKEN=your-huggingface-token
+
+# PostgreSQL Database Connection
+DATABASE_URL=postgresql://username:password@localhost:5432/pdf_rag_db
+
+# JWT Authentication
+SECRET_KEY=your-secret-key
+ALGORITHM=HS256
+ACCESS_TOKEN_EXPIRE_MINUTES=30
+```
+
+> **Note**
+>
+> * Replace all placeholder values with your own credentials.
+> * Generate a strong random `SECRET_KEY` for signing JWT tokens.
+> * Ensure PostgreSQL is running and the database has been created before starting the application.
+
+---
+
+## 5. Run the Application
+
+If you're using **uv**, start the FastAPI development server with:
+
+```bash
+uv run uvicorn app.main:app --reload
+```
+
+Alternatively, if you've already activated your virtual environment, you can run:
+
+```bash
+uvicorn app.main:app --reload
+```
+
+Once the server is running, the application will be available at:
+
+* **API Base URL:** `http://127.0.0.1:8000`
+* **Swagger UI:** `http://127.0.0.1:8000/docs`
+* **ReDoc Documentation:** `http://127.0.0.1:8000/redoc`
+
+
+
 
 ---
 
