@@ -1,4 +1,5 @@
 from fastapi import HTTPException, status
+from fastapi.security import OAuth2PasswordRequestForm
 from app.db.database import conn
 from app.auth.password import PasswordService
 from app.schemas.user import UserRegister
@@ -7,7 +8,8 @@ from app.auth.jwt_service import JWTService
 
 class AuthService:
     @staticmethod
-    def login(user):
+    def login(user: OAuth2PasswordRequestForm):
+
         with conn.cursor() as cursor:
             cursor.execute(
                 """
@@ -15,7 +17,7 @@ class AuthService:
                 FROM users
                 WHERE email = %s
                 """,
-                (user.email,)
+                (user.username,)
             )
             # Fetch inside the with block
             db_user = cursor.fetchone()
@@ -81,6 +83,7 @@ class AuthService:
                 INSERT INTO users
                 (username, email, password_hash)
                 VALUES (%s, %s, %s)
+                RETURNING id
                 """,
                 (
                     user.username,
@@ -88,8 +91,12 @@ class AuthService:
                     hashed_password
                 )
             )
+            user_id = cursor.fetchone()[0]
             conn.commit()
 
         return {
-            "message": "User registered successfully."
-        }
+            "id": user_id,
+            "username": user.username,
+            "email": user.email
+        }
+

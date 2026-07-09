@@ -1,12 +1,6 @@
 import psycopg
 from pgvector.psycopg import register_vector
+from app.core.config import DATABASE_URL
 
-conn = psycopg.connect(
-    host="localhost",
-    dbname="pdf_rag_db",
-    user="postgres",
-    password="0123umer",
-    port=5433
-)
-register_vector(conn)
-cursor = conn.cursor()
+conn = psycopg.connect(DATABASE_URL)
+register_vector(conn)

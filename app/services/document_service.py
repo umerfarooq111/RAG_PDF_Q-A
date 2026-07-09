@@ -1,16 +1,17 @@
 from app.db.database import conn
+from fastapi import HTTPException, status
 
 class DocumentService:
     @staticmethod
-    def create_document(filename: str, file_path: str, total_pages: int) -> int:
+    def create_document(filename: str, file_path: str, total_pages: int, user_id: int) -> int:
         with conn.cursor() as cursor:
             cursor.execute(
                 """
-                INSERT INTO documents (filename, file_path, total_pages)
-                VALUES (%s, %s, %s)
+                INSERT INTO documents (filename, file_path, total_pages, user_id)
+                VALUES (%s, %s, %s, %s)
                 RETURNING id;
                 """,
-                (filename, file_path, total_pages)
+                (filename, file_path, total_pages, user_id)
             )
             document_id = cursor.fetchone()[0]
             conn.commit()
@@ -37,13 +38,14 @@ class DocumentService:
             conn.commit()
 
     @staticmethod
-    def get_all_documents() -> list[dict]:
+    def get_all_documents(user_id: int) -> list[dict]:
         with conn.cursor() as cursor:
             cursor.execute("""
                 SELECT id, filename, uploaded_at
                 FROM documents
+                WHERE user_id = %s
                 ORDER BY uploaded_at DESC;
-            """)
+            """, (user_id,))
             documents = cursor.fetchall()
             return [
                 {
@@ -55,22 +57,47 @@ class DocumentService:
             ]
 
     @staticmethod
-    def delete_document(document_id: int) -> bool:
+    def delete_document(document_id: int, user_id: int) -> bool:
         with conn.cursor() as cursor:
+            cursor.execute(
+                """
+                SELECT user_id
+                FROM documents
+                WHERE id = %s
+                """,
+                (document_id,)
+            )
+            row = cursor.fetchone()
+            if row is None:
+                raise HTTPException(
+                    status_code=status.HTTP_404_NOT_FOUND,
+                    detail="Document not found."
+                )
+            if row[0] != user_id:
+                raise HTTPException(
+                    status_code=status.HTTP_403_FORBIDDEN,
+                    detail="Access denied. You do not own this document."
+                )
+            
             cursor.execute(
                 """
                 DELETE FROM documents
                 WHERE id = %s
-                RETURNING id;
                 """,
                 (document_id,)
             )
-            deleted = cursor.fetchone()
             conn.commit()
-            return deleted is not None
+            return True
 
     @staticmethod
-    def clear_all_documents():
+    def clear_all_documents(user_id: int):
         with conn.cursor() as cursor:
-            cursor.execute("DELETE FROM documents;")
+            cursor.execute(
+                """
+                DELETE FROM documents
+                WHERE user_id = %s
+                """,
+                (user_id,)
+            )
             conn.commit()
+

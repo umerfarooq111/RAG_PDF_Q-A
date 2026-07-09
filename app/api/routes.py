@@ -1,26 +1,17 @@
 from fastapi import APIRouter, UploadFile, File, Depends
-
+from fastapi.security import OAuth2PasswordRequestForm
 from app.services.upload_service import UploadService
 from app.services.document_service import DocumentService
 from app.services.retrieval_service import RetrievalService
 from app.auth.auth_service import AuthService
 from app.auth.dependencies import get_current_user
-from app.schemas.user import UserRegister
-from app.schemas.login import UserLogin
+from app.schemas.user import UserRegister, UserOut, Token
 
 router = APIRouter(
     prefix="/api/v1",
     tags=["PDF RAG API"]
 )
 
-
-@router.post("/register")
-def register(user: UserRegister):
-    return AuthService.register(user)
-
-@router.post("/login")
-def login(user: UserLogin):
-    return AuthService.login(user)
 
 @router.get("/")
 def home():
@@ -36,10 +27,21 @@ def about():
         "developer": "Umer Farooq"
     }
 
+
+@router.post("/register", response_model=UserOut)
+def register(user: UserRegister):
+    return AuthService.register(user)
+
+
+@router.post("/login", response_model=Token)
+def login(form_data: OAuth2PasswordRequestForm = Depends()):
+    return AuthService.login(form_data)
+
+
 @router.post("/upload")
 async def upload_pdf(
     file: UploadFile = File(...),
-    current_user=Depends(get_current_user)
+    current_user: dict = Depends(get_current_user)
 ):
     """
     Upload a PDF file to be processed.
@@ -50,37 +52,49 @@ async def upload_pdf(
         current_user=current_user
     )
 
+
 @router.post("/ask")
-async def ask_question(question: str, current_user: dict = Depends(get_current_user)):
-    return RetrievalService.ask_question(question=question,
-        current_user=current_user)
+async def ask_question(
+    question: str,
+    current_user: dict = Depends(get_current_user)
+):
+    return RetrievalService.ask_question(
+        question=question,
+        current_user=current_user
+    )
 
 
 @router.get("/documents")
-def get_documents(current_user: dict = Depends(get_current_user)):
-    documents = DocumentService.get_all_documents()
+def get_documents(
+    current_user: dict = Depends(get_current_user)
+):
+    documents = DocumentService.get_all_documents(
+        current_user["id"]
+    )
     return {
         "documents": documents
     }
 
 
 @router.delete("/documents/{document_id}")
-def delete_document(document_id: int, current_user: dict = Depends(get_current_user)):
-    success = DocumentService.delete_document(document_id)
-    if not success:
-        return {
-            "message": "Document not found."
-        }
+def delete_document(
+    document_id: int,
+    current_user: dict = Depends(get_current_user)
+):
+    DocumentService.delete_document(document_id, current_user["id"])
     return {
         "message": f"Document {document_id} deleted successfully."
     }
 
 
 @router.delete("/clear")
-def clear_database(current_user: dict = Depends(get_current_user)):
-    DocumentService.clear_all_documents()
+def clear_database(
+    current_user: dict = Depends(get_current_user)
+):
+    DocumentService.clear_all_documents(current_user["id"])
     return {
-        "message": "All documents deleted successfully."
+        "message": "All your documents deleted successfully."
     }
+
 
 
